@@ -58,5 +58,9 @@ Dominar la notación algebraica (ej. `e4`, `c5`, `Nf3`) es fundamental para:
 1. Leer libros y artículos de ajedrez con fluidez, sin necesidad de armar un tablero físico.
 
 2. Calcular variantes profundas en tu mente (ajedrez a ciegas).
+<<<<<<< HEAD
 
 3. Seguir retransmisiones de torneos y entender rápidamente de qué casilla están hablando los comentaristas.
+=======
+3. Seguir retransmisiones de torneos y entender rápidamente de qué casilla están hablando los comentaristas.
+>>>>>>> cc202c8b9c154d43ffa64210d88514f6a8d7f462
