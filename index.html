@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Entrenador de Coordenadas de Ajedrez</title>
+    <style>
+        :root {
+            /* Paleta de colores - Tema Oscuro Moderno */
+            --bg-color: #0f172a;
+            --surface-color: #1e293b;
+            --surface-hover: #334155;
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --success-color: #22c55e;
+            --danger-color: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            
+            /* Colores del tablero clásico (estilo chess.com) */
+            --sq-dark: #739552;
+            --sq-light: #ebecd0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            touch-action: manipulation;
+        }
+
+        .layout-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 1100px;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        /* Layout para pantallas grandes (Desktop) */
+        @media (min-width: 850px) {
+            .layout-container {
+                flex-direction: row;
+                align-items: flex-start;
+                justify-content: center;
+            }
+        }
+
+        /* Columna Izquierda: Tablero */
+        .board-column {
+            width: 100%;
+            max-width: 600px;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Columna Derecha: Panel de Control */
+        .panel-column {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .header-title {
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        .header-title h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+        }
+        .header-title p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .card {
+            background-color: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .target-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            border: 2px solid var(--primary-color);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+            min-height: 140px;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .target-text {
+            font-size: 4.5rem;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            line-height: 1;
+            margin-top: 0.5rem;
+            color: var(--text-main);
+        }
+
+        button {
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 0.75rem;
+            transition: all 0.2s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        button:active { transform: scale(0.97); }
+
+        .btn-start {
+            background-color: var(--success-color);
+            color: white;
+            padding: 1.25rem;
+            width: 100%;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+            margin-top: 1rem;
+        }
+        .btn-start:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+        .btn-stop { background-color: var(--surface-hover); color: var(--text-main); padding: 1rem; width: 100%; margin-top: 1rem; }
+        .btn-stop:hover { background-color: var(--danger-color); color: white; }
+
+        .btn-primary { background-color: var(--primary-color); color: white; padding: 1rem; width: 100%; margin-top: 1rem; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1rem; }
+
+        .time-btn {
+            background-color: rgba(0,0,0,0.2);
+            color: var(--text-muted);
+            padding: 0.75rem;
+            border: 2px solid transparent;
+        }
+        .time-btn.selected {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: #60a5fa;
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 0.75rem;
+        }
+        .toggle-btn {
+            background-color: var(--surface-color);
+            color: var(--text-main);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            border: 1px solid var(--surface-hover);
+            flex: 1;
+        }
+        .toggle-btn:hover { background-color: var(--surface-hover); }
+
+        .stats-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .stat-box { display: flex; flex-direction: column; align-items: center; flex: 1; }
+        .stat-value { font-size: 1.75rem; font-weight: 800; line-height: 1.2; }
+        .val-correct { color: var(--success-color); }
+        .val-incorrect { color: var(--danger-color); }
+        .val-timer { color: var(--primary-color); font-variant-numeric: tabular-nums; }
+
+        /* Secciones dinámicas del panel */
+        .panel-section { display: none; animation: fadeIn 0.3s ease; }
+        .panel-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .result-row { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--surface-hover); font-size: 1.1rem;}
+        .result-row:last-child { border-bottom: none; }
+        .result-accuracy { text-align: center; margin-top: 1rem; font-size: 3rem; font-weight: 900; color: var(--primary-color); }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 8px solid var(--surface-color);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
+        }
+
+        .board-square {
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            outline: none;
+            user-select: none;
+        }
+
+        .sq-dark { background-color: var(--sq-dark); }
+        .sq-light { background-color: var(--sq-light); }
+
+        /* Layout del Tablero y Coordenadas Externas */
+        .board-layout {
+            display: grid;
+            grid-template-columns: 30px 1fr;
+            grid-template-rows: 1fr 30px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        .board-layout.hide-coords {
+            grid-template-columns: 0px 1fr;
+            grid-template-rows: 1fr 0px;
+        }
+        .board-layout.hide-coords .coords-y,
+        .board-layout.hide-coords .coords-x {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .coords-y {
+            display: grid;
+            grid-template-rows: repeat(8, 1fr);
+            align-items: center;
+            justify-items: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            transition: opacity 0.3s;
+        }
+        
+        .coords-x {
+            grid-column: 2;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            align-items: center;
+            justify-items: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            transition: opacity 0.3s;
+        }
+
+        /* Toggle Switch de Orientación */
+        .orientation-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            background-color: var(--surface-color);
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--surface-hover);
+            flex: 1;
+        }
+
+        .switch-icon {
+            font-size: 1.8rem;
+            line-height: 1;
+            color: var(--text-main);
+            user-select: none;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 54px;
+            height: 28px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--surface-hover);
+            transition: .4s;
+            border-radius: 34px;
+            border: 2px solid var(--text-muted);
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-main);
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Feedback visual */
+        .flash-correct { background-color: rgba(34, 197, 94, 0.8) !important; transition: none; }
+        .flash-incorrect { background-color: rgba(239, 68, 68, 0.8) !important; transition: none; }
+
+    </style>
+</head>
+<body>
+
+    <div class="layout-container">
+        
+        <!-- COLUMNA IZQUIERDA: Tablero -->
+        <div class="board-column">
+            <div class="board-layout" id="board-layout">
+                <div class="coords-y" id="coords-y"></div>
+                <div id="board">
+                    <!-- Se genera dinámicamente con JS -->
+                </div>
+                <div></div> <!-- Esquina vacía inferior izquierda -->
+                <div class="coords-x" id="coords-x"></div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: Panel de Control -->
+        <div class="panel-column">
+            
+            <div class="header-title">
+                <h1>Entrenador de Coordenadas</h1>
+                <p>Mejora tu visión espacial a ciegas</p>
+            </div>
+
+            <!-- Objetivo Principal -->
+            <div class="target-box">
+                <span id="target-label" class="stat-label">Esperando...</span>
+                <span id="target-display" class="target-text">--</span>
+            </div>
+
+            <!-- SECCIÓN 1: Menú de Inicio -->
+            <div id="panel-menu" class="card panel-section active">
+                <h2 style="text-align: center; font-size: 1.1rem; margin-bottom: 0.5rem;">Duración del juego</h2>
+                <div class="grid-2" id="time-selectors">
+                    <button class="time-btn" data-time="30">30 Segundos</button>
+                    <button class="time-btn selected" data-time="60">1 Minuto</button>
+                    <button class="time-btn" data-time="120">2 Minutos</button>
+                    <button class="time-btn" data-time="300">5 Minutos</button>
+                </div>
+                <button id="btn-start" class="btn-start">Iniciar Juego</button>
+            </div>
+
+            <!-- SECCIÓN 2: Juego Activo (Estadísticas) -->
+            <div id="panel-game" class="card panel-section">
+                <div class="stats-group">
+                    <div class="stat-box">
+                        <span class="stat-label">Aciertos</span>
+                        <span id="score-correct" class="stat-value val-correct">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Fallos</span>
+                        <span id="score-incorrect" class="stat-value val-incorrect">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Tiempo</span>
+                        <span id="timer-display" class="stat-value val-timer">00:00</span>
+                    </div>
+                </div>
+                <button id="btn-stop" class="btn-stop">Terminar Juego</button>
+            </div>
+
+            <!-- SECCIÓN 3: Resultados -->
+            <div id="panel-result" class="card panel-section">
+                <h2 style="text-align: center; font-size: 1.5rem; margin-bottom: 1rem;">¡Tiempo Terminado!</h2>
+                <div class="result-row">
+                    <span>Casillas intentadas</span>
+                    <span id="res-total" style="font-weight: 700;">0</span>
+                </div>
+                <div class="result-row">
+                    <span>Aciertos</span>
+                    <span id="res-correct" class="val-correct" style="font-weight: 700;">0</span>
+                </div>
+                <div class="result-row">
+                    <span>Fallos</span>
+                    <span id="res-incorrect" class="val-incorrect" style="font-weight: 700;">0</span>
+                </div>
+                <div>
+                    <div class="text-center stat-label" style="margin-top: 1.5rem;">Precisión</div>
+                    <div id="res-accuracy" class="result-accuracy">0%</div>
+                </div>
+                <button id="btn-restart" class="btn-primary">Jugar de nuevo</button>
+            </div>
+
+            <!-- Botones Globales (Siempre visibles) -->
+            <div class="controls-row">
+                <button id="btn-toggle-coords" class="toggle-btn">👁 Ocultar Ejes</button>
+                <div class="orientation-toggle">
+                    <span class="switch-icon">♚</span>
+                    <label class="switch">
+                        <input type="checkbox" id="flip-switch">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-icon">♔</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Referencias DOM
+        const boardElement = document.getElementById('board');
+        const boardLayout = document.getElementById('board-layout');
+        const coordsYElement = document.getElementById('coords-y');
+        const coordsXElement = document.getElementById('coords-x');
+        
+        // Paneles
+        const panelMenu = document.getElementById('panel-menu');
+        const panelGame = document.getElementById('panel-game');
+        const panelResult = document.getElementById('panel-result');
+        
+        // Displays
+        const targetDisplay = document.getElementById('target-display');
+        const targetLabel = document.getElementById('target-label');
+        const timerDisplay = document.getElementById('timer-display');
+        const scoreCorrectDisplay = document.getElementById('score-correct');
+        const scoreIncorrectDisplay = document.getElementById('score-incorrect');
+        
+        // Botones
+        const btnStart = document.getElementById('btn-start');
+        const btnStop = document.getElementById('btn-stop');
+        const btnRestart = document.getElementById('btn-restart');
+        const btnToggleCoords = document.getElementById('btn-toggle-coords');
+        const flipSwitch = document.getElementById('flip-switch');
+        const timeBtns = document.querySelectorAll('.time-btn');
+        
+        // Estado del juego
+        let selectedTime = 60; 
+        let timeLeft = 0;
+        let timerInterval = null;
+        let currentTarget = '';
+        let scoreCorrect = 0;
+        let scoreIncorrect = 0;
+        let isPlaying = false;
+        
+        // Estado del tablero
+        let coordsVisible = true;
+        let isFlipped = false; // False = Blancas abajo, True = Negras abajo
+
+        const baseFiles = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+        const baseRanks = ['1', '2', '3', '4', '5', '6', '7', '8'];
+
+        function createBoard() {
+            boardElement.innerHTML = '';
+            coordsYElement.innerHTML = '';
+            coordsXElement.innerHTML = '';
+            
+            // Orden de visualización según isFlipped
+            const displayFiles = isFlipped ? [...baseFiles].reverse() : baseFiles;
+            const displayRanks = isFlipped ? baseRanks : [...baseRanks].reverse();
+
+            // Dibujar Ejes de coordenadas
+            displayRanks.forEach(rank => {
+                const span = document.createElement('span');
+                span.textContent = rank;
+                coordsYElement.appendChild(span);
+            });
+            displayFiles.forEach(file => {
+                const span = document.createElement('span');
+                span.textContent = file;
+                coordsXElement.appendChild(span);
+            });
+
+            // Dibujar Tablero
+            for (let r = 0; r < 8; r++) {
+                for (let f = 0; f < 8; f++) {
+                    const square = document.createElement('div');
+                    const fileChar = displayFiles[f];
+                    const rankChar = displayRanks[r];
+                    const coord = fileChar + rankChar;
+                    
+                    square.dataset.coord = coord;
+                    square.className = 'board-square';
+                    
+                    // Cálculo color: a1(0,0) es oscura. a2(0,1) es clara.
+                    const fileIdx = baseFiles.indexOf(fileChar);
+                    const rankIdx = baseRanks.indexOf(rankChar);
+                    if ((fileIdx + rankIdx) % 2 === 0) {
+                        square.classList.add('sq-dark');
+                    } else {
+                        square.classList.add('sq-light');
+                    }
+
+                    // Eventos
+                    const handleInteraction = (e) => {
+                        e.preventDefault();
+                        checkAnswer(coord, square);
+                    };
+
+                    square.addEventListener('mousedown', handleInteraction);
+                    square.addEventListener('touchstart', handleInteraction, { passive: false });
+
+                    boardElement.appendChild(square);
+                }
+            }
+        }
+
+        function switchPanel(panelToShow) {
+            panelMenu.classList.remove('active');
+            panelGame.classList.remove('active');
+            panelResult.classList.remove('active');
+            panelToShow.classList.add('active');
+        }
+
+        function nextTarget() {
+            const randomFile = baseFiles[Math.floor(Math.random() * baseFiles.length)];
+            const randomRank = baseRanks[Math.floor(Math.random() * baseRanks.length)];
+            currentTarget = randomFile + randomRank;
+            targetDisplay.textContent = currentTarget;
+        }
+
+        function checkAnswer(clickedCoord, squareElement) {
+            if (!isPlaying || timeLeft <= 0) return;
+
+            if (clickedCoord === currentTarget) {
+                scoreCorrect++;
+                scoreCorrectDisplay.textContent = scoreCorrect;
+                triggerFlash(squareElement, 'flash-correct');
+            } else {
+                scoreIncorrect++;
+                scoreIncorrectDisplay.textContent = scoreIncorrect;
+                triggerFlash(squareElement, 'flash-incorrect');
+            }
+            nextTarget();
+        }
+
+        function triggerFlash(element, className) {
+            element.classList.remove(className);
+            void element.offsetWidth; // Forzar repintado
+            element.classList.add(className);
+            setTimeout(() => element.classList.remove(className), 200);
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function startGame() {
+            isPlaying = true;
+            scoreCorrect = 0;
+            scoreIncorrect = 0;
+            scoreCorrectDisplay.textContent = '0';
+            scoreIncorrectDisplay.textContent = '0';
+            
+            timeLeft = selectedTime;
+            timerDisplay.textContent = formatTime(timeLeft);
+            
+            targetLabel.textContent = 'Encuentra la casilla';
+            
+            switchPanel(panelGame);
+            nextTarget();
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = formatTime(timeLeft);
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+        }
+
+        function endGame() {
+            isPlaying = false;
+            clearInterval(timerInterval);
+            targetLabel.textContent = 'Esperando...';
+            targetDisplay.textContent = '--';
+            
+            const total = scoreCorrect + scoreIncorrect;
+            const accuracy = total === 0 ? 0 : Math.round((scoreCorrect / total) * 100);
+            
+            document.getElementById('res-total').textContent = total;
+            document.getElementById('res-correct').textContent = scoreCorrect;
+            document.getElementById('res-incorrect').textContent = scoreIncorrect;
+            document.getElementById('res-accuracy').textContent = `${accuracy}%`;
+            
+            switchPanel(panelResult);
+        }
+
+        function stopGame() {
+            isPlaying = false;
+            clearInterval(timerInterval);
+            targetLabel.textContent = 'Esperando...';
+            targetDisplay.textContent = '--';
+            switchPanel(panelMenu);
+        }
+
+        // Listeners Botones de Tiempo
+        timeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                timeBtns.forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedTime = parseInt(btn.dataset.time);
+            });
+        });
+
+        // Listeners Controles Globales
+        btnToggleCoords.addEventListener('click', () => {
+            coordsVisible = !coordsVisible;
+            if (coordsVisible) {
+                boardLayout.classList.remove('hide-coords');
+                btnToggleCoords.textContent = '👁 Ocultar Ejes';
+            } else {
+                boardLayout.classList.add('hide-coords');
+                btnToggleCoords.textContent = '👁 Mostrar Ejes';
+            }
+        });
+
+        flipSwitch.addEventListener('change', (e) => {
+            isFlipped = e.target.checked;
+            createBoard();
+        });
+
+        // Listeners Acciones Principales
+        btnStart.addEventListener('click', startGame);
+        btnStop.addEventListener('click', stopGame);
+        btnRestart.addEventListener('click', () => switchPanel(panelMenu));
+
+        // Iniciar tablero inactivo
+        createBoard();
+
+    </script>
+</body>
+</html>
